@@ -1,0 +1,30 @@
+on:
+  workflow_call:
+    inputs:
+      exclude:
+        default: ''
+        required: false
+        type: string
+      pre-command:
+        default: ''
+        required: false
+        type: string
+    secrets:
+      gh_token:
+        required: false
+
+jobs:
+  clang_tidy_review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.gh_token }}
+
+      - name: Run clang-tidy review
+        uses: kimhyungrok/clang-tidy-action@v1.2.1
+        with:
+          exclude: ${{ inputs.exclude }}
+          pre-command: ${{ inputs.pre-command }}

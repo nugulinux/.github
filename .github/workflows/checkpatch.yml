@@ -1,0 +1,35 @@
+on:
+  workflow_call:
+    inputs:
+      commits:
+        required: true
+        type: number
+        description: github.event.pull_request.commits
+      head_sha:
+        required: true
+        type: string
+        description: github.event.pull_request.head.sha
+    secrets:
+      gh_token:
+        required: false
+
+jobs:
+  checkpatch_review:
+    runs-on: ubuntu-latest
+    steps:
+      # Set PR_FETCH_DEPTH variable
+      - name: 'Calculate PR commits + 1'
+        run: echo "PR_FETCH_DEPTH=$(( ${{ inputs.commits }} + 1 ))" >> "$GITHUB_ENV"
+
+      # Fetch code containing commit history as much as `fetch-depth` value.
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.head_sha }}
+          fetch-depth: $PR_FETCH_DEPTH
+          token: ${{ secrets.gh_token }}
+
+      - name: Run checkpatch review
+        uses: webispy/checkpatch-action@v9
+        env:
+          GITHUB_TOKEN: ${{ secrets.gh_token }}

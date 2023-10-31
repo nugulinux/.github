@@ -1,0 +1,47 @@
+on:
+  workflow_call:
+    inputs:
+      docker_image:
+        required: false
+        type: string
+        default: nugulinux/devenv:focal
+      command:
+        required: false
+        type: string
+        default: cmake ..
+    secrets:
+      gh_token:
+        required: false
+
+jobs:
+  cppcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+          token: ${{ secrets.gh_token }}
+
+      - name: Generate compile_commands.json
+        run: |
+          mkdir build
+          docker run -t --rm -v $PWD:$PWD -w $PWD/build \
+            ${{ inputs.docker_image }} \
+            ${{ inputs.command }}
+
+      - name: Run cppcheck
+        run: |
+          if [ ! -f .cppcheck_suppress.txt ]; then
+            touch .cppcheck_suppress.txt
+          fi
+
+          docker run -t --rm -v $PWD:$PWD -w $PWD \
+            ghcr.io/facthunder/cppcheck:2.6 \
+            cppcheck \
+              --project=build/compile_commands.json \
+              --suppressions-list=.cppcheck_suppress.txt \
+              --enable=all \
+              -j 6 \
+              -iexternals
