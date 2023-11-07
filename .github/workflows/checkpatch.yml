@@ -13,6 +13,9 @@ on:
       gh_token:
         required: false
 
+env:
+  gh_token: ${{ github.token }}
+
 jobs:
   checkpatch_review:
     runs-on: ubuntu-latest
@@ -21,15 +24,28 @@ jobs:
       - name: 'Calculate PR commits + 1'
         run: echo "PR_FETCH_DEPTH=$(( ${{ inputs.commits }} + 1 ))" >> "$GITHUB_ENV"
 
+      # Check secret
+      - name: "Check secrets.gh_token exists"
+        id: check_secret
+        shell: bash
+        run: |
+          if [ "${{ secrets.gh_token }}" != '' ]; then
+            echo "secrets.gh_token is exist"
+            echo "token=${{ secrets.gh_token }}" >> $GITHUB_OUTPUT
+          else
+            echo "secrets.gh_token is not exist. use github.token"
+            echo "token=${{ env.gh_token }}" >> $GITHUB_OUTPUT
+          fi
+
       # Fetch code containing commit history as much as `fetch-depth` value.
       - name: Check out the repo
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.head_sha }}
           fetch-depth: $PR_FETCH_DEPTH
-          token: ${{ secrets.gh_token }}
+          token: ${{ steps.check_secret.outputs.token }}
 
       - name: Run checkpatch review
         uses: webispy/checkpatch-action@v9
         env:
-          GITHUB_TOKEN: ${{ secrets.gh_token }}
+          GITHUB_TOKEN: ${{ steps.check_secret.outputs.token }}

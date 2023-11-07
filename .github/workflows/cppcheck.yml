@@ -13,16 +13,32 @@ on:
       gh_token:
         required: false
 
+env:
+  gh_token: ${{ github.token }}
+
 jobs:
   cppcheck:
     runs-on: ubuntu-latest
     steps:
+      # Check secret
+      - name: "Check secrets.gh_token exists"
+        id: check_secret
+        shell: bash
+        run: |
+          if [ "${{ secrets.gh_token }}" != '' ]; then
+            echo "secrets.gh_token is exist"
+            echo "token=${{ secrets.gh_token }}" >> $GITHUB_OUTPUT
+          else
+            echo "secrets.gh_token is not exist. use github.token"
+            echo "token=${{ env.gh_token }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Check out the repo
         uses: actions/checkout@v4
         with:
           submodules: true
           fetch-depth: 0
-          token: ${{ secrets.gh_token }}
+          token: ${{ steps.check_secret.outputs.token }}
 
       - name: Generate compile_commands.json
         run: |
